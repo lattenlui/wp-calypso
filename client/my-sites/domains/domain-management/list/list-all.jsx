@@ -91,7 +91,7 @@ class ListAll extends Component {
 	}
 
 	renderDomainItem( domain ) {
-		const { currentRoute, domainsDetails, sites, requestingSiteDomains } = this.props;
+		const { currentRoute, domainsDetails, purchases, sites, requestingSiteDomains } = this.props;
 
 		return (
 			<>
@@ -101,6 +101,7 @@ class ListAll extends Component {
 					domain={ domain }
 					domainDetails={ this.findDomainDetails( domainsDetails, domain ) }
 					site={ sites[ domain?.blogId ] }
+					purchase={ purchases[ this.findDomainDetails( domainsDetails, domain )?.subscriptionId ] }
 					isManagingAllSites={ true }
 					isLoadingDomainDetails={ requestingSiteDomains[ domain?.blogId ] ?? false }
 					onClick={ this.handleDomainItemClick }
