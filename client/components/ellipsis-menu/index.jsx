@@ -42,6 +42,12 @@ class EllipsisMenu extends Component {
 
 	popoverContext = React.createRef();
 
+	static getDerivedStateFromProps( props, state ) {
+		return {
+			isMenuVisible: props.disabled ? false : state.isMenuVisible,
+		};
+	}
+
 	handleClick = ( event ) => {
 		const { onClick } = this.props;
 		const { isMenuVisible } = this.state;
@@ -95,7 +101,7 @@ class EllipsisMenu extends Component {
 				>
 					<Gridicon icon="ellipsis" className="ellipsis-menu__toggle-icon" />
 				</Button>
-				{ isMenuVisible && (
+				{ ! disabled && isMenuVisible && (
 					<PopoverMenu
 						isVisible
 						onClose={ this.hideMenu }

@@ -6,6 +6,7 @@ import PropTypes from 'prop-types';
 import page from 'page';
 import Gridicon from 'components/gridicon';
 import { localize } from 'i18n-calypso';
+import { connect } from 'react-redux';
 import classNames from 'classnames';
 
 /**
@@ -23,6 +24,9 @@ import { handleRenewNowClick } from 'lib/purchases';
 import { resolveDomainStatus } from 'lib/domains';
 import InfoPopover from 'components/info-popover';
 import { emailManagement } from 'my-sites/email/paths';
+import AutoRenewToggle from 'me/purchases/manage-purchase/auto-renew-toggle';
+import { modifySiteDomain } from 'state/sites/domains/actions';
+import { createNotice } from 'state/notices/actions';
 
 class DomainItem extends PureComponent {
 	static propTypes = {
@@ -36,6 +40,8 @@ class DomainItem extends PureComponent {
 		onToggle: PropTypes.func,
 		purchase: PropTypes.object,
 		isLoadingDomainDetails: PropTypes.bool,
+		modifySiteDomain: PropTypes.func.isRequired,
+		createNotice: PropTypes.func.isRequired,
 	};
 
 	static defaultProps = {
@@ -43,6 +49,10 @@ class DomainItem extends PureComponent {
 		showCheckbox: false,
 		onToggle: null,
 		isLoadingDomainDetails: false,
+	};
+
+	state = {
+		isBusy: false,
 	};
 
 	handleClick = () => {
@@ -122,12 +132,39 @@ class DomainItem extends PureComponent {
 		return this.renderMinus();
 	}
 
+	onToggleAutoRenewRequestStart = () => {
+		this.setState( { isBusy: true } );
+	};
+
+	onToggleAutoRenewResponse = ( newValue, success ) => {
+		const { site, domainDetails, translate } = this.props;
+		this.setState( { isBusy: false } );
+
+		if ( success ) {
+			this.props.modifySiteDomain( site.ID, domainDetails.name, {
+				isAutoRenewing: newValue,
+				autoRenewing: newValue,
+			} );
+		} else {
+			this.props.createNotice(
+				'is-error',
+				newValue
+					? translate( "We've failed to enable auto-renewal for you. Please try again." )
+					: translate( "We've failed to disable auto-renewal for you. Please try again." )
+			);
+		}
+	};
+
 	renderOptionsButton() {
-		const { isManagingAllSites, translate } = this.props;
+		const { domainDetails, isManagingAllSites, purchase, site, translate } = this.props;
 
 		return (
 			<div className="list__domain-options">
-				<EllipsisMenu onClick={ this.stopPropagation } toggleTitle={ translate( 'Options' ) }>
+				<EllipsisMenu
+					disabled={ this.state.isBusy }
+					onClick={ this.stopPropagation }
+					toggleTitle={ translate( 'Options' ) }
+				>
 					{ ! isManagingAllSites && (
 						<PopoverMenuItem icon="domains">{ translate( 'Make primary domain' ) }</PopoverMenuItem>
 					) }
@@ -135,6 +172,27 @@ class DomainItem extends PureComponent {
 						<PopoverMenuItem icon="refresh" onClick={ this.renewDomain }>
 							{ translate( 'Renew now' ) }
 						</PopoverMenuItem>
+					) }
+					{ this.canRenewDomain() && (
+						<AutoRenewToggle
+							planName={ site.plan.product_name_short }
+							siteDomain={ site.domain }
+							siteSlug={ site.slug }
+							purchase={ purchase }
+							compact
+							toggleSource={ isManagingAllSites ? 'all-domains' : 'site-domains' }
+							customComponent={ PopoverMenuItem }
+							customComponentChildren={
+								domainDetails.isAutoRenewing
+									? translate( 'Turn off auto-renew' )
+									: translate( 'Turn on auto-renew' )
+							}
+							customComponentProps={ { icon: 'sync' } }
+							onCustomComponentClick={ this.stopPropagation }
+							onToggleRequestStart={ this.onToggleAutoRenewRequestStart }
+							onToggleResponseReceived={ this.onToggleAutoRenewResponse }
+							disabled={ this.state.isBusy }
+						/>
 					) }
 					<PopoverMenuItem icon="pencil">{ translate( 'Edit settings' ) }</PopoverMenuItem>
 				</EllipsisMenu>
@@ -249,6 +307,14 @@ class DomainItem extends PureComponent {
 		return null;
 	}
 
+	renderOverlay() {
+		if ( this.state.isBusy ) {
+			return <div className="domain-item__overlay">Waiting...</div>;
+		}
+
+		return null;
+	}
+
 	render() {
 		const { domain, domainDetails, isManagingAllSites, showCheckbox } = this.props;
 		const { listStatusText, listStatusClass } = resolveDomainStatus( domainDetails || domain );
@@ -277,9 +343,10 @@ class DomainItem extends PureComponent {
 					{ this.renderSiteMeta() }
 				</div>
 				{ this.renderActionItems() }
+				{ this.renderOverlay() }
 			</CompactCard>
 		);
 	}
 }
 
-export default localize( DomainItem );
+export default connect( null, { modifySiteDomain, createNotice } )( localize( DomainItem ) );

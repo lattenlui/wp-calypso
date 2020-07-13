@@ -39,6 +39,12 @@ class AutoRenewToggle extends Component {
 		withTextStatus: PropTypes.bool,
 		toggleSource: PropTypes.string,
 		siteSlug: PropTypes.string,
+		customComponent: PropTypes.any,
+		customComponentProps: PropTypes.object,
+		customComponentChildren: PropTypes.any,
+		onCustomComponentClick: PropTypes.any,
+		onToggleRequestStart: PropTypes.func,
+		onToggleResponseReceived: PropTypes.func,
 	};
 
 	static defaultProps = {
@@ -107,6 +113,8 @@ class AutoRenewToggle extends Component {
 			isEnabled,
 			isAtomicSite,
 			translate,
+			onToggleRequestStart,
+			onToggleResponseReceived,
 		} = this.props;
 
 		const updateAutoRenew = isEnabled ? disableAutoRenew : enableAutoRenew;
@@ -134,7 +142,16 @@ class AutoRenewToggle extends Component {
 			isRequesting: true,
 		} );
 
+		if ( onToggleRequestStart ) {
+			onToggleRequestStart();
+		}
+
 		updateAutoRenew( purchaseId, ( success ) => {
+			if ( onToggleResponseReceived ) {
+				onToggleResponseReceived( isTogglingToward, success );
+				return;
+			}
+
 			this.setState( {
 				isRequesting: false,
 			} );
@@ -185,6 +202,14 @@ class AutoRenewToggle extends Component {
 		return this.state.isRequesting || this.props.fetchingUserPurchases;
 	};
 
+	customComponentClick = ( event ) => {
+		const { onCustomComponentClick } = this.props;
+		if ( onCustomComponentClick ) {
+			onCustomComponentClick( event );
+		}
+		this.toggleAutoRenew();
+	};
+
 	getToggleUiStatus() {
 		return this.props.isEnabled;
 	}
@@ -204,16 +229,33 @@ class AutoRenewToggle extends Component {
 	}
 
 	render() {
-		const { planName, siteDomain, purchase, compact, withTextStatus } = this.props;
+		const {
+			planName,
+			siteDomain,
+			purchase,
+			compact,
+			withTextStatus,
+			customComponent,
+			customComponentProps,
+			customComponentChildren,
+		} = this.props;
 
 		if ( ! this.shouldRender( purchase ) ) {
 			return null;
 		}
 
-		const ToggleComponent = compact ? CompactFormToggle : FormToggle;
+		let toggleView;
 
-		return (
-			<>
+		if ( customComponent ) {
+			const CustomComponent = customComponent;
+			toggleView = (
+				<CustomComponent onClick={ this.customComponentClick } { ...customComponentProps }>
+					{ customComponentChildren }
+				</CustomComponent>
+			);
+		} else {
+			const ToggleComponent = compact ? CompactFormToggle : FormToggle;
+			toggleView = (
 				<ToggleComponent
 					checked={ this.getToggleUiStatus() }
 					disabled={ this.isUpdatingAutoRenew() }
@@ -222,6 +264,12 @@ class AutoRenewToggle extends Component {
 				>
 					{ withTextStatus && this.renderTextStatus() }
 				</ToggleComponent>
+			);
+		}
+
+		return (
+			<>
+				{ toggleView }
 				<AutoRenewDisablingDialog
 					isVisible={ this.state.showAutoRenewDisablingDialog }
 					planName={ planName }

@@ -8,6 +8,7 @@ import { find, indexOf } from 'lodash';
  * Internal dependencies
  */
 import {
+	SITE_DOMAIN_MODIFY,
 	SITE_DOMAINS_RECEIVE,
 	SITE_DOMAINS_REQUEST,
 	SITE_DOMAINS_REQUEST_SUCCESS,
@@ -32,7 +33,7 @@ import { itemsSchema } from './schema';
  * Returns a copy of the domains state object with some modifications
  *
  * @param {object} state - current state
- * @param {int} siteId - site ID
+ * @param {number} siteId - site ID
  * @param {string} domain - domain name
  * @param {object} modifyDomainProperties - object with modified site domain properties
  * @returns {any} - new copy of the state
@@ -61,6 +62,8 @@ const modifySiteDomainObjectImmutable = ( state, siteId, domain, modifyDomainPro
 export const items = withSchemaValidation( itemsSchema, ( state = {}, action ) => {
 	const { siteId } = action;
 	switch ( action.type ) {
+		case SITE_DOMAIN_MODIFY:
+			return modifySiteDomainObjectImmutable( state, siteId, action.domain, action.props );
 		case SITE_DOMAINS_RECEIVE:
 			return Object.assign( {}, state, {
 				[ siteId ]: action.domains,
