@@ -17,7 +17,6 @@ import {
 	pick,
 	flatten,
 	groupBy,
-	intersection,
 	snakeCase,
 	split,
 } from 'lodash';
@@ -74,14 +73,6 @@ const staticFilesUrls = staticFiles.reduce( ( result, file ) => {
 	result[ file.path ] = utils.getUrl( file.path, file.hash );
 	return result;
 }, {} );
-
-// List of browser languages to show pride styling for.
-// Add a '*' element to show the styling for all visitors.
-const prideLanguages = [];
-
-// List of geolocated locations to show pride styling for.
-// Geolocation may not be 100% accurate.
-const prideLocations = [];
 
 // TODO: Re-use (a modified version of) client/state/initial-state#getInitialServerState here
 function getInitialServerState( serializedServerState ) {
@@ -213,33 +204,6 @@ function getCurrentCommitShortChecksum() {
 	}
 }
 
-/**
- * Given the content of an 'Accept-Language' request header, returns an array of the languages.
- *
- * This differs slightly from other language functions, as it doesn't try to validate the language codes,
- * or merge similar language codes.
- *
- * @param  {string} header - The content of the AcceptedLanguages header.
- * @returns {Array} An array of language codes in the header, all in lowercase.
- */
-function getAcceptedLanguagesFromHeader( header ) {
-	if ( ! header ) {
-		return [];
-	}
-
-	return header
-		.split( ',' )
-		.map( ( lang ) => {
-			const match = lang.match( /^[A-Z]{2,3}(-[A-Z]{2,3})?/i );
-			if ( ! match ) {
-				return false;
-			}
-
-			return match[ 0 ].toLowerCase();
-		} )
-		.filter( ( lang ) => lang );
-}
-
 /*
  * Look at the request headers and determine if the request is logged in or logged out or if
  * it's a support session. Set `req.context.isLoggedIn` and `req.context.isSupportSession` flags
@@ -262,31 +226,17 @@ function setupLoggedInContext( req, res, next ) {
 function getDefaultContext( request, entrypoint = 'entry-main' ) {
 	let initialServerState = {};
 	let lang = config( 'i18n_default_locale_slug' );
-	const bodyClasses = [];
 	// We don't compare context.query against an allowed list here. Explicit allowance lists are route-specific,
 	// i.e. they can be created by route-specific middleware. `getDefaultContext` is always
 	// called before route-specific middleware, so it's up to the cache *writes* in server
 	// render to make sure that Redux state and markup are only cached for specified query args.
 	const cacheKey = getNormalizedPath( request.path, request.query );
-	const geoLocation = ( request.headers[ 'x-geoip-country-code' ] || '' ).toLowerCase();
 	const devEnvironments = [ 'development', 'jetpack-cloud-development' ];
 	const isDebug = devEnvironments.includes( calypsoEnv ) || request.query.debug !== undefined;
 
 	if ( cacheKey ) {
 		const serializeCachedServerState = stateCache.get( cacheKey ) || {};
 		initialServerState = getInitialServerState( serializeCachedServerState );
-	}
-
-	// Note: The x-geoip-country-code header should *not* be considered 100% accurate.
-	// It should only be used for guestimating the visitor's location.
-	const acceptedLanguages = getAcceptedLanguagesFromHeader( request.headers[ 'accept-language' ] );
-	if (
-		prideLanguages.indexOf( '*' ) > -1 ||
-		intersection( prideLanguages, acceptedLanguages ).length > 0 ||
-		prideLocations.indexOf( '*' ) > -1 ||
-		prideLocations.indexOf( geoLocation ) > -1
-	) {
-		bodyClasses.push( 'pride' );
 	}
 
 	// We assign request.context.lang in the handleLocaleSubdomains()
@@ -327,7 +277,6 @@ function getDefaultContext( request, entrypoint = 'entry-main' ) {
 		preferencesHelper: !! config.isEnabled( 'dev/preferences-helper' ),
 		devDocsURL: '/devdocs',
 		store: reduxStore,
-		bodyClasses,
 		addEvergreenCheck: target === 'evergreen' && calypsoEnv !== 'development',
 		target: target || 'fallback',
 		useTranslationChunks:
