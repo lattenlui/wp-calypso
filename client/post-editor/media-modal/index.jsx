@@ -39,8 +39,8 @@ import { getEditorPostId } from 'state/editor/selectors';
 import { resetMediaModalView } from 'state/ui/media-modal/actions';
 import { setEditorMediaModalView } from 'state/editor/actions';
 import { ModalViews } from 'state/ui/media-modal/constants';
-import { editMedia, deleteMedia } from 'state/media/thunks';
-import { setMediaLibrarySelectedItems } from 'state/media/actions';
+import { editMedia, deleteMedia, addExternalMedia } from 'state/media/thunks';
+import { setMediaLibrarySelectedItems, changeMediaSource } from 'state/media/actions';
 import ImageEditor from 'blocks/image-editor';
 import VideoEditor from 'blocks/video-editor';
 import MediaModalDialog from './dialog';
@@ -130,7 +130,7 @@ export class EditorMediaModal extends Component {
 
 			if ( nextProps.source && this.state.source !== nextProps.source && nextProps.site ) {
 				// Signal that we're coming from another data source
-				MediaActions.sourceChanged( nextProps.site.ID );
+				this.props.changeMediaSource( nextProps.site.ID );
 			}
 		} else {
 			this.props.resetView();
@@ -166,7 +166,7 @@ export class EditorMediaModal extends Component {
 		const { site } = this.props;
 
 		// Trigger the action to clear pointers/selected items
-		MediaActions.sourceChanged( site.ID );
+		this.props.changeMediaSource( site.ID );
 
 		// Change our state back to WordPress
 		this.setState(
@@ -178,7 +178,7 @@ export class EditorMediaModal extends Component {
 				// Reset the query so that we're adding the new media items to the correct
 				// list, with no external source.
 				MediaActions.setQuery( site.ID, {} );
-				MediaActions.addExternal( site, selectedMedia, originalSource );
+				this.props.addExternalMedia( selectedMedia, site, originalSource );
 			}
 		);
 	}
@@ -196,7 +196,7 @@ export class EditorMediaModal extends Component {
 				search: '',
 			} );
 		}
-		MediaActions.addExternal( site, selectedMedia, originalSource );
+		this.props.addExternalMedia( selectedMedia, site, originalSource );
 		if ( hasSearch ) {
 			// make sure that query change gets everywhere so next time the source is loaded,
 			// or the WP media library is opened, the new media is loaded
@@ -421,7 +421,7 @@ export class EditorMediaModal extends Component {
 	};
 
 	onSourceChange = ( source ) => {
-		MediaActions.sourceChanged( this.props.site.ID );
+		this.props.changeMediaSource( this.props.site.ID );
 		this.setState( {
 			source,
 			search: undefined,
@@ -657,5 +657,7 @@ export default connect(
 		recordEditorStat,
 		editMedia,
 		setMediaLibrarySelectedItems,
+		addExternalMedia,
+		changeMediaSource,
 	}
 )( localize( EditorMediaModal ) );

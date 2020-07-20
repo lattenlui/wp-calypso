@@ -14,6 +14,7 @@ import classNames from 'classnames';
  */
 import { Button, CompactCard } from '@automattic/components';
 import FormCheckbox from 'components/forms/form-checkbox';
+import FormRadio from 'components/forms/form-radio';
 import DomainNotice from 'my-sites/domains/domain-management/components/domain-notice';
 import EllipsisMenu from 'components/ellipsis-menu';
 import PopoverMenuItem from 'components/popover/menu-item';
@@ -27,36 +28,49 @@ import { emailManagement } from 'my-sites/email/paths';
 import AutoRenewToggle from 'me/purchases/manage-purchase/auto-renew-toggle';
 import { modifySiteDomain } from 'state/sites/domains/actions';
 import { createNotice } from 'state/notices/actions';
+import Spinner from 'components/spinner';
+import TrackComponentView from 'lib/analytics/track-component-view';
 
 class DomainItem extends PureComponent {
 	static propTypes = {
+		busyMessage: PropTypes.string,
 		currentRoute: PropTypes.string,
+		disabled: PropTypes.bool,
 		domain: PropTypes.object.isRequired,
 		domainDetails: PropTypes.object,
 		site: PropTypes.object,
 		isManagingAllSites: PropTypes.bool,
+		isBusy: PropTypes.bool,
 		showCheckbox: PropTypes.bool,
 		onClick: PropTypes.func.isRequired,
+		onMakePrimaryClick: PropTypes.func,
+		onSelect: PropTypes.func,
 		onToggle: PropTypes.func,
+		onUpgradeClick: PropTypes.func,
+		shouldUpgradeToMakePrimary: PropTypes.boolean,
 		purchase: PropTypes.object,
 		isLoadingDomainDetails: PropTypes.bool,
 		modifySiteDomain: PropTypes.func.isRequired,
 		createNotice: PropTypes.func.isRequired,
+		selectionIndex: PropTypes.number,
+		enableSelection: PropTypes.bool,
 	};
 
 	static defaultProps = {
+		disabled: false,
 		isManagingAllSites: false,
 		showCheckbox: false,
 		onToggle: null,
 		isLoadingDomainDetails: false,
-	};
-
-	state = {
 		isBusy: false,
 	};
 
-	handleClick = () => {
-		this.props.onClick( this.props.domainDetails );
+	handleClick = ( e ) => {
+		if ( this.props.enableSelection ) {
+			this.onSelect( e );
+		} else {
+			this.props.onClick( this.props.domainDetails );
+		}
 	};
 
 	stopPropagation = ( event ) => {
@@ -70,8 +84,11 @@ class DomainItem extends PureComponent {
 	};
 
 	addEmailClick = ( event ) => {
-		const { currentRoute, domain, site } = this.props;
+		const { currentRoute, disabled, domain, site } = this.props;
 		event.stopPropagation();
+		if ( disabled ) {
+			return;
+		}
 		page( emailManagement( site.slug, domain.domain, currentRoute ) );
 	};
 
@@ -82,6 +99,22 @@ class DomainItem extends PureComponent {
 		handleRenewNowClick( purchase, site.slug );
 	};
 
+	makePrimary = ( event ) => {
+		const { domainDetails, selectionIndex, onMakePrimaryClick } = this.props;
+
+		event.stopPropagation();
+
+		if ( onMakePrimaryClick ) {
+			onMakePrimaryClick( selectionIndex, domainDetails );
+		}
+	};
+
+	onSelect = ( event ) => {
+		const { domainDetails, selectionIndex, onSelect } = this.props;
+		event.stopPropagation();
+		onSelect( selectionIndex, domainDetails );
+	};
+
 	canRenewDomain() {
 		const { domainDetails, purchase } = this.props;
 		return (
@@ -90,6 +123,31 @@ class DomainItem extends PureComponent {
 			domainDetails.currentUserCanManage &&
 			[ domainTypes.WPCOM, domainTypes.TRANSFER ].indexOf( domainDetails.type ) === -1 &&
 			! domainDetails.bundledPlanSubscriptionId
+		);
+	}
+
+	canSetAsPrimary() {
+		const { domainDetails, isManagingAllSites, shouldUpgradeToMakePrimary } = this.props;
+		return (
+			! isManagingAllSites &&
+			domainDetails &&
+			domainDetails.canSetAsPrimary &&
+			! domainDetails.isPrimary &&
+			! shouldUpgradeToMakePrimary
+		);
+	}
+
+	upgradeToMakePrimary() {
+		const { translate } = this.props;
+
+		return (
+			<div className="domain-item__upsell">
+				<span>{ translate( 'Upgrade to a paid plan to make this your primary domain' ) }</span>
+				<Button primary onClick={ this.props.onUpgradeClick }>
+					{ translate( 'Upgrade' ) }
+				</Button>
+				<TrackComponentView eventName="calypso_domain_management_list_change_primary_upgrade_impression" />
+			</div>
 		);
 	}
 
@@ -156,17 +214,27 @@ class DomainItem extends PureComponent {
 	};
 
 	renderOptionsButton() {
-		const { domainDetails, isManagingAllSites, purchase, site, translate } = this.props;
+		const {
+			domainDetails,
+			disabled,
+			isBusy,
+			isManagingAllSites,
+			purchase,
+			site,
+			translate,
+		} = this.props;
 
 		return (
 			<div className="list__domain-options">
 				<EllipsisMenu
-					disabled={ this.state.isBusy }
+					disabled={ disabled || isBusy }
 					onClick={ this.stopPropagation }
 					toggleTitle={ translate( 'Options' ) }
 				>
-					{ ! isManagingAllSites && (
-						<PopoverMenuItem icon="domains">{ translate( 'Make primary domain' ) }</PopoverMenuItem>
+					{ this.canSetAsPrimary() && (
+						<PopoverMenuItem icon="domains" onClick={ this.makePrimary }>
+							{ translate( 'Make primary domain' ) }
+						</PopoverMenuItem>
 					) }
 					{ this.canRenewDomain() && (
 						<PopoverMenuItem icon="refresh" onClick={ this.renewDomain }>
@@ -307,16 +375,37 @@ class DomainItem extends PureComponent {
 		return null;
 	}
 
+	busyMessage() {
+		if ( this.props.isBusy && this.props.busyMessage ) {
+			return <div className="domain-item__busy-message">{ this.props.busyMessage }</div>;
+		}
+	}
+
 	renderOverlay() {
-		if ( this.state.isBusy ) {
-			return <div className="domain-item__overlay">Waiting...</div>;
+		const { enableSelection, isBusy, shouldUpgradeToMakePrimary } = this.props;
+		if ( isBusy ) {
+			return (
+				<div className="domain-item__overlay">
+					{ this.busyMessage() }
+					<Spinner className="domain-item__spinner" size={ 20 } />
+				</div>
+			);
+		}
+
+		if ( enableSelection && shouldUpgradeToMakePrimary ) {
+			return (
+				// eslint-disable-next-line jsx-a11y/click-events-have-key-events,jsx-a11y/no-static-element-interactions
+				<div className="domain-item__overlay" onClick={ this.stopPropagation }>
+					{ this.upgradeToMakePrimary() }
+				</div>
+			);
 		}
 
 		return null;
 	}
 
 	render() {
-		const { domain, domainDetails, isManagingAllSites, showCheckbox } = this.props;
+		const { domain, domainDetails, isManagingAllSites, showCheckbox, enableSelection } = this.props;
 		const { listStatusText, listStatusClass } = resolveDomainStatus( domainDetails || domain );
 
 		const rowClasses = classNames( 'domain-item', `domain-item__status-${ listStatusClass }` );
@@ -332,6 +421,9 @@ class DomainItem extends PureComponent {
 						onChange={ this.onToggle }
 						onClick={ this.stopPropagation }
 					/>
+				) }
+				{ enableSelection && (
+					<FormRadio className="domain-item__checkbox" onClick={ this.onSelect } />
 				) }
 				<div className="list__domain-link">
 					<div className="domain-item__status">

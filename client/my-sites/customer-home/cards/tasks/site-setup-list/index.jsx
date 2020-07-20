@@ -30,7 +30,7 @@ import { requestGuidedTour } from 'state/ui/guided-tours/actions';
 import { getSelectedSiteId } from 'state/ui/selectors';
 import { skipCurrentViewHomeLayout } from 'state/home/actions';
 import NavItem from './nav-item';
-import { SITE_CHECKLIST_KNOWN_TASKS } from 'my-sites/customer-home/cards/tasks/site-setup-list/get-task';
+import { CHECKLIST_KNOWN_TASKS } from 'state/data-layer/wpcom/checklist/index.js';
 import { getTask } from './get-task';
 
 /**
@@ -120,7 +120,7 @@ const SiteSetupList = ( {
 
 	const isDomainUnverified =
 		tasks.filter(
-			( task ) => task.id === SITE_CHECKLIST_KNOWN_TASKS.DOMAIN_VERIFIED && ! task.isCompleted
+			( task ) => task.id === CHECKLIST_KNOWN_TASKS.DOMAIN_VERIFIED && ! task.isCompleted
 		).length > 0;
 
 	// Move to first incomplete task on first load.
@@ -231,21 +231,25 @@ const SiteSetupList = ( {
 			{ ( ! useDrillLayout || currentDrillLayoutView === 'nav' ) && (
 				<div className="site-setup-list__nav">
 					{ ! useDrillLayout && <CardHeading>{ translate( 'Site setup' ) }</CardHeading> }
-					{ tasks.map( ( task ) => (
-						<NavItem
-							key={ task.id }
-							taskId={ task.id }
-							text={ getTask( task ).title }
-							isCompleted={ task.isCompleted }
-							isCurrent={ task.id === currentTask.id }
-							onClick={ () => {
-								setTaskIsManuallySelected( true );
-								setCurrentTaskId( task.id );
-								setCurrentDrillLayoutView( 'task' );
-							} }
-							showChevron={ useDrillLayout }
-						/>
-					) ) }
+					{ tasks.map( ( task ) => {
+						const enhancedTask = getTask( task );
+
+						return (
+							<NavItem
+								key={ task.id }
+								taskId={ task.id }
+								text={ enhancedTask.label || enhancedTask.title }
+								isCompleted={ task.isCompleted }
+								isCurrent={ task.id === currentTask.id }
+								onClick={ () => {
+									setTaskIsManuallySelected( true );
+									setCurrentTaskId( task.id );
+									setCurrentDrillLayoutView( 'task' );
+								} }
+								showChevron={ useDrillLayout }
+							/>
+						);
+					} ) }
 				</div>
 			) }
 			{ ( ! useDrillLayout || currentDrillLayoutView === 'task' ) && (

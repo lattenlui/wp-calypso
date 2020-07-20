@@ -1,8 +1,8 @@
 /**
  * External dependencies
  */
-
 import React from 'react';
+import { connect } from 'react-redux';
 import Gridicon from 'components/gridicon';
 import { debounce } from 'lodash';
 import { localize } from 'i18n-calypso';
@@ -13,9 +13,10 @@ import PropTypes from 'prop-types';
  */
 import MediaLibraryScale from './scale';
 import { Card, Button } from '@automattic/components';
-import MediaActions from 'lib/media/actions';
 import MediaListStore from 'lib/media/list-store';
 import StickyPanel from 'components/sticky-panel';
+import { addExternalMedia, fetchNextMediaPage } from 'state/media/thunks';
+import { changeMediaSource } from 'state/media/actions';
 
 const DEBOUNCE_TIME = 250;
 
@@ -88,15 +89,15 @@ class MediaLibraryExternalHeader extends React.Component {
 	onClick() {
 		const { ID } = this.props.site;
 
-		MediaActions.sourceChanged( ID );
-		MediaActions.fetchNextPage( ID );
+		this.props.fetchNextMediaPage( ID );
+		this.props.changeMediaSource( ID );
 	}
 
 	onCopy = () => {
 		const { site, selectedItems, source, onSourceChange } = this.props;
 
 		onSourceChange( '', () => {
-			MediaActions.addExternal( site, selectedItems, source );
+			this.props.addExternalMedia( selectedItems, site, source );
 		} );
 	};
 
@@ -157,4 +158,6 @@ class MediaLibraryExternalHeader extends React.Component {
 	}
 }
 
-export default localize( MediaLibraryExternalHeader );
+export default connect( null, { addExternalMedia, changeMediaSource, fetchNextMediaPage } )(
+	localize( MediaLibraryExternalHeader )
+);

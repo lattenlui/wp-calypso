@@ -118,7 +118,7 @@ export default {
 		allowExistingUsers: true,
 	},
 	newSiteGutenbergOnboarding: {
-		datestamp: '20200702',
+		datestamp: '20200714',
 		variations: {
 			gutenberg: 10,
 			control: 90,
@@ -148,16 +148,6 @@ export default {
 		allowExistingUsers: false,
 		countryCodeTargets: [ 'US' ],
 	},
-	passwordlessAfterPlans: {
-		datestamp: '20200618',
-		variations: {
-			variantPasswordless: 0,
-			control: 100,
-		},
-		defaultVariation: 'control',
-		allowExistingUsers: true,
-		countryCodeTargets: [ 'US' ],
-	},
 	showBusinessPlanBump: {
 		datestamp: '20200619',
 		variations: {
@@ -166,5 +156,15 @@ export default {
 		},
 		defaultVariation: 'control',
 		allowExistingUsers: true,
+	},
+	showCompositeCheckoutI18N: {
+		datestamp: '20200710',
+		variations: {
+			composite: 90,
+			regular: 10,
+		},
+		defaultVariation: 'regular',
+		allowExistingUsers: true,
+		localeTargets: 'any',
 	},
 };

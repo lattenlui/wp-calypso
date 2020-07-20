@@ -1,5 +1,6 @@
-@import '../base-styles.scss';
-@import '../mixins.scss';
+@import '~@wordpress/base-styles/breakpoints';
+@import '~@automattic/onboarding/styles/mixins';
+@import '~@automattic/typography/styles/variables';
 @import '../variables.scss';
 
 .plans-table {
@@ -78,6 +79,10 @@
 	font-size: $font-body-small;
 }
 
+ul.plan-item__feature-item-group {
+	margin: 0;
+}
+
 .plan-item__mobile-expand-all-plans {
 	// increase specificity
 	&.components-button.is-link {
@@ -94,9 +99,11 @@
 	text-align: center;
 	text-transform: uppercase;
 	color: white;
-	padding: 4.5px;
+	padding: 0 5px;
 	font-size: $font-body-extra-small;
 	margin-top: -24px;
+	height: 24px;
+	line-height: 24px;
 }
 
 .plan-item__price-amount {
@@ -106,7 +113,7 @@
 
 	&.is-loading {
 		max-width: 60px;
-		@include placeholder();
+		@include onboarding-placeholder();
 	}
 }
 
@@ -177,7 +184,7 @@
 	font-size: $font-body-small;
 	line-height: 22px;
 	margin-top: 10px;
-	
+
 	// overwrite button styles
 	&.components-button.is-link {
 		text-decoration: none;

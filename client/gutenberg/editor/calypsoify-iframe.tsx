@@ -30,6 +30,7 @@ import { updateSiteFrontPage } from 'state/sites/actions';
 import getCurrentRoute from 'state/selectors/get-current-route';
 import getPostTypeTrashUrl from 'state/selectors/get-post-type-trash-url';
 import getGutenbergEditorUrl from 'state/selectors/get-gutenberg-editor-url';
+import { getSelectedEditor } from 'state/selectors/get-selected-editor';
 import getEditorCloseConfig from 'state/selectors/get-editor-close-config';
 import wpcom from 'lib/wp';
 import EditorRevisionsDialog from 'post-editor/editor-revisions/dialog';
@@ -137,18 +138,23 @@ class CalypsoifyIframe extends Component<
 	componentDidMount() {
 		MediaStore.on( 'change', this.updateImageBlocks );
 		window.addEventListener( 'message', this.onMessage, false );
+
+		const isDesktop = config.isEnabled( 'desktop' );
+		// If the iframe fails to load for some reson, eg. an unexpected auth loop, this timeout
+		// provides a redirect to wpadmin for web users - this should now be a rare occurance with
+		// a 3rd party cookie auth issue fix in place https://github.com/Automattic/jetpack/pull/16167
 		this.waitForIframeToInit = setInterval( () => {
 			if ( this.props.shouldLoadIframe ) {
 				clearInterval( this.waitForIframeToInit );
 				this.waitForIframeToLoad = setTimeout( () => {
-					config.isEnabled( 'desktop' )
+					isDesktop
 						? this.props.notifyDesktopCannotOpenEditor(
 								this.props.site,
 								REASON_BLOCK_EDITOR_UNKOWN_IFRAME_LOAD_FAILURE,
 								this.props.iframeUrl
 						  )
 						: window.location.replace( this.props.iframeUrl );
-				}, 8000 ); // Three seconds longer than we give the iframe to load
+				}, 25000 );
 			}
 		}, 1000 );
 	}
@@ -341,8 +347,12 @@ class CalypsoifyIframe extends Component<
 					post: translate( 'View all posts' ),
 				},
 				createPostLabels: {
-					page: translate( 'Create new page' ),
-					post: translate( 'Create new post' ),
+					page: translate( 'Add new page' ),
+					post: translate( 'Add new post' ),
+				},
+				listHeadings: {
+					page: translate( 'Recent Pages' ),
+					post: translate( 'Recent Posts' ),
 				},
 			} );
 		}
@@ -729,7 +739,7 @@ const mapStateToProps = (
 	}
 
 	// Pass through to iframed editor if user is in editor deprecation group.
-	if ( inEditorDeprecationGroup( state ) ) {
+	if ( inEditorDeprecationGroup( state ) && 'classic' === getSelectedEditor( state, siteId ) ) {
 		queryArgs[ 'in-editor-deprecation-group' ] = 1;
 	}
 
