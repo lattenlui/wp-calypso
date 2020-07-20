@@ -11,7 +11,7 @@ import { loadScript } from '@automattic/load-script';
 /**
  * Internal Dependencies
  */
-import { getCurrentUser, setCurrentUser } from './utils/current-user';
+import { getCurrentUser } from './utils/current-user';
 import getDoNotTrack from './utils/do-not-track';
 import { getPageViewParams } from './page-view-params';
 import debug from './utils/debug';
@@ -153,15 +153,13 @@ export function identifyUser( userData: any ): any {
 	}
 
 	// Set current user.
-	const currentUser = setCurrentUser( userData );
-	if ( ! currentUser ) {
+	if ( typeof userData.ID !== 'undefined' || typeof userData.username !== 'undefined' ) {
+		// Tracks user identification.
+		debug( 'Tracks identifyUser.', userData );
+		pushEventToTracksQueue( [ 'identifyUser', userData.ID, userData.username ] );
+	} else {
 		debug( 'Insufficient userData.', userData );
-		return; // Not possible.
 	}
-
-	// Tracks user identification.
-	debug( 'Tracks identifyUser.', currentUser );
-	pushEventToTracksQueue( [ 'identifyUser', currentUser.ID, currentUser.username ] );
 }
 
 export function recordTracksEvent( eventName: string, eventProperties?: any ) {
