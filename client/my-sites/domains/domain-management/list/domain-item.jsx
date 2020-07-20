@@ -26,7 +26,6 @@ import { resolveDomainStatus } from 'lib/domains';
 import InfoPopover from 'components/info-popover';
 import { emailManagement } from 'my-sites/email/paths';
 import AutoRenewToggle from 'me/purchases/manage-purchase/auto-renew-toggle';
-import { modifySiteDomain } from 'state/sites/domains/actions';
 import { createNotice } from 'state/notices/actions';
 import Spinner from 'components/spinner';
 import TrackComponentView from 'lib/analytics/track-component-view';
@@ -50,7 +49,6 @@ class DomainItem extends PureComponent {
 		shouldUpgradeToMakePrimary: PropTypes.boolean,
 		purchase: PropTypes.object,
 		isLoadingDomainDetails: PropTypes.bool,
-		modifySiteDomain: PropTypes.func.isRequired,
 		createNotice: PropTypes.func.isRequired,
 		selectionIndex: PropTypes.number,
 		enableSelection: PropTypes.bool,
@@ -199,10 +197,7 @@ class DomainItem extends PureComponent {
 		this.setState( { isBusy: false } );
 
 		if ( success ) {
-			this.props.modifySiteDomain( site.ID, domainDetails.name, {
-				isAutoRenewing: newValue,
-				autoRenewing: newValue,
-			} );
+			// TODO
 		} else {
 			this.props.createNotice(
 				'is-error',
@@ -441,4 +436,4 @@ class DomainItem extends PureComponent {
 	}
 }
 
-export default connect( null, { modifySiteDomain, createNotice } )( localize( DomainItem ) );
+export default connect( null, { createNotice } )( localize( DomainItem ) );

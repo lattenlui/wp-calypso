@@ -13,7 +13,6 @@ import wp from 'lib/wp';
 import {
 	DOMAIN_PRIVACY_ENABLE,
 	DOMAIN_PRIVACY_DISABLE,
-	SITE_DOMAIN_MODIFY,
 	SITE_DOMAINS_RECEIVE,
 	SITE_DOMAINS_REQUEST,
 	SITE_DOMAINS_REQUEST_SUCCESS,
@@ -183,14 +182,5 @@ export function redactDomainContactInfo( siteId, domain ) {
 		type: DOMAIN_CONTACT_INFO_REDACT,
 		siteId,
 		domain,
-	};
-}
-
-export function modifySiteDomain( siteId, domain, props ) {
-	return {
-		type: SITE_DOMAIN_MODIFY,
-		siteId,
-		domain,
-		props,
 	};
 }
