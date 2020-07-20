@@ -29,6 +29,9 @@ import AutoRenewToggle from 'me/purchases/manage-purchase/auto-renew-toggle';
 import { createNotice } from 'state/notices/actions';
 import Spinner from 'components/spinner';
 import TrackComponentView from 'lib/analytics/track-component-view';
+import { fetchUserPurchases } from 'state/purchases/actions';
+import { fetchSiteDomains } from 'state/sites/domains/actions';
+import { getCurrentUserId } from 'state/current-user/selectors';
 
 class DomainItem extends PureComponent {
 	static propTypes = {
@@ -52,6 +55,8 @@ class DomainItem extends PureComponent {
 		createNotice: PropTypes.func.isRequired,
 		selectionIndex: PropTypes.number,
 		enableSelection: PropTypes.bool,
+		fetchUserPurchases: PropTypes.func,
+		fetchSiteDomains: PropTypes.func,
 	};
 
 	static defaultProps = {
@@ -61,6 +66,10 @@ class DomainItem extends PureComponent {
 		onToggle: null,
 		isLoadingDomainDetails: false,
 		isBusy: false,
+	};
+
+	state = {
+		togglingAutoRenew: false,
 	};
 
 	handleClick = ( e ) => {
@@ -189,15 +198,16 @@ class DomainItem extends PureComponent {
 	}
 
 	onToggleAutoRenewRequestStart = () => {
-		this.setState( { isBusy: true } );
+		this.setState( { togglingAutoRenew: true } );
 	};
 
 	onToggleAutoRenewResponse = ( newValue, success ) => {
-		const { site, domainDetails, translate } = this.props;
-		this.setState( { isBusy: false } );
+		const { currentUserId, site, translate } = this.props;
+		this.setState( { togglingAutoRenew: false } );
 
 		if ( success ) {
-			// TODO
+			this.props.fetchUserPurchases( currentUserId );
+			this.props.fetchSiteDomains( site.ID );
 		} else {
 			this.props.createNotice(
 				'is-error',
@@ -222,7 +232,7 @@ class DomainItem extends PureComponent {
 		return (
 			<div className="list__domain-options">
 				<EllipsisMenu
-					disabled={ disabled || isBusy }
+					disabled={ disabled || isBusy || this.state.togglingAutoRenew }
 					onClick={ this.stopPropagation }
 					toggleTitle={ translate( 'Options' ) }
 				>
@@ -254,7 +264,6 @@ class DomainItem extends PureComponent {
 							onCustomComponentClick={ this.stopPropagation }
 							onToggleRequestStart={ this.onToggleAutoRenewRequestStart }
 							onToggleResponseReceived={ this.onToggleAutoRenewResponse }
-							disabled={ this.state.isBusy }
 						/>
 					) }
 					<PopoverMenuItem icon="pencil">{ translate( 'Edit settings' ) }</PopoverMenuItem>
@@ -370,18 +379,26 @@ class DomainItem extends PureComponent {
 		return null;
 	}
 
-	busyMessage() {
-		if ( this.props.isBusy && this.props.busyMessage ) {
-			return <div className="domain-item__busy-message">{ this.props.busyMessage }</div>;
+	busyMessage( message ) {
+		if ( message ) {
+			return <div className="domain-item__busy-message">{ message }</div>;
 		}
 	}
 
 	renderOverlay() {
-		const { enableSelection, isBusy, shouldUpgradeToMakePrimary } = this.props;
-		if ( isBusy ) {
+		const {
+			enableSelection,
+			isBusy,
+			busyMessage,
+			shouldUpgradeToMakePrimary,
+			translate,
+		} = this.props;
+		if ( isBusy || this.state.togglingAutoRenew ) {
 			return (
 				<div className="domain-item__overlay">
-					{ this.busyMessage() }
+					{ this.busyMessage(
+						this.state.togglingAutoRenew ? translate( 'Toggling auto-renew' ) : busyMessage
+					) }
 					<Spinner className="domain-item__spinner" size={ 20 } />
 				</div>
 			);
@@ -436,4 +453,9 @@ class DomainItem extends PureComponent {
 	}
 }
 
-export default connect( null, { createNotice } )( localize( DomainItem ) );
+export default connect(
+	( state ) => {
+		return { currentUserId: getCurrentUserId( state ) };
+	},
+	{ createNotice, fetchSiteDomains, fetchUserPurchases }
+)( localize( DomainItem ) );
